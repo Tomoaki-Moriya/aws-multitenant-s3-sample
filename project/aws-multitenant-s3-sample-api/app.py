@@ -102,6 +102,8 @@ def login():
             AuthParameters={"USERNAME": username, "PASSWORD": password},
             ClientId=USER_POOL_CLIENT_ID,
         )
-        return Response(body=response["AuthenticationResult"], status_code=200)
+        return Response(
+            body=response["AuthenticationResult"]["IdToken"], status_code=200
+        )
     except ClientError:
         raise UnauthorizedError()
