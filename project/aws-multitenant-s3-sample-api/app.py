@@ -1,3 +1,6 @@
+from ast import Not
+import base64
+from operator import is_
 import os
 import boto3
 from botocore.exceptions import ClientError
@@ -7,6 +10,7 @@ from chalice import (
     Response,
     UnauthorizedError,
     BadRequestError,
+    NotFoundError,
 )
 
 USER_POOL_ID = os.environ["USER_POOL_ID"]
@@ -17,23 +21,27 @@ AWS_ACCOUNT_ID = os.environ["AWS_ACCOUNT_ID"]
 REGION = "ap-northeast-1"
 
 app = Chalice(app_name="aws-multitenant-s3-sample-api")
+app.api.binary_types = ["*/*"]
+
 authorizer = CognitoUserPoolAuthorizer(
     name="AwsMultitenantS3SampleAuthorizer",
     provider_arns=[
         f"arn:aws:cognito-idp:{REGION}:{AWS_ACCOUNT_ID}:userpool/{USER_POOL_ID}"
     ],
 )
-cognito_client = boto3.client("cognito-idp")
+
+cognito_idp_client = boto3.client("cognito-idp")
+cognito_id_client = boto3.client("cognito-identity")
 
 
 def get_temporary_credentials(id_token: str):
-    identity_response = cognito_client.get_id(
+    identity_response = cognito_id_client.get_id(
         IdentityPoolId=IDENTITY_POOL_ID,
         Logins={f"cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}": id_token},
     )
     identity_id = identity_response["IdentityId"]
 
-    credentials_response = cognito_client.get_credentials_for_identity(
+    credentials_response = cognito_id_client.get_credentials_for_identity(
         IdentityId=identity_id,
         Logins={f"cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}": id_token},
     )
@@ -42,7 +50,15 @@ def get_temporary_credentials(id_token: str):
 
 
 @app.route("/files/{key+}", methods=["GET"], authorizer=authorizer)
-def index(key: str):
+def index():
+    key = (
+        app.current_request.uri_params.get("key")
+        if app.current_request and app.current_request.uri_params
+        else None
+    )
+    if key is None:
+        raise NotFoundError()
+
     bearer_token = (
         app.current_request.headers.get("Authorization")
         if app.current_request
@@ -68,17 +84,8 @@ def index(key: str):
             status_code=200,
             headers={"Content-Type": obj["ContentType"]},
         )
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "NoSuchKey":
-            return Response(
-                body="Not Found",
-                status_code=404,
-            )
-        else:
-            return Response(
-                body="Internal Server Error",
-                status_code=500,
-            )
+    except ClientError:
+        raise NotFoundError()
 
 
 @app.route("/login", methods=["POST"])
@@ -97,7 +104,7 @@ def login():
         raise BadRequestError()
 
     try:
-        response = cognito_client.initiate_auth(
+        response = cognito_idp_client.initiate_auth(
             AuthFlow="USER_PASSWORD_AUTH",
             AuthParameters={"USERNAME": username, "PASSWORD": password},
             ClientId=USER_POOL_CLIENT_ID,
