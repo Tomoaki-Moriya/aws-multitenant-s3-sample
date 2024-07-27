@@ -1,14 +1,15 @@
 import os
+
 import boto3
 from botocore.exceptions import ClientError
 from chalice import (
+    BadRequestError,
     Chalice,
     CognitoUserPoolAuthorizer,
+    CORSConfig,
+    NotFoundError,
     Response,
     UnauthorizedError,
-    BadRequestError,
-    NotFoundError,
-    CORSConfig,
 )
 
 USER_POOL_ID = os.environ["USER_POOL_ID"]
