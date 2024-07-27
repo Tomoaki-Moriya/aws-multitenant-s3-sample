@@ -1,6 +1,3 @@
-from ast import Not
-import base64
-from operator import is_
 import os
 import boto3
 from botocore.exceptions import ClientError
@@ -11,6 +8,7 @@ from chalice import (
     UnauthorizedError,
     BadRequestError,
     NotFoundError,
+    CORSConfig,
 )
 
 USER_POOL_ID = os.environ["USER_POOL_ID"]
@@ -22,6 +20,14 @@ REGION = "ap-northeast-1"
 
 app = Chalice(app_name="aws-multitenant-s3-sample-api")
 app.api.binary_types = ["*/*"]
+cors_config = CORSConfig(
+    allow_origin="*",  # Danger. Only for testing.
+    allow_headers=[],
+    max_age=600,
+    expose_headers=[],
+    allow_credentials=True,
+)
+
 
 authorizer = CognitoUserPoolAuthorizer(
     name="AwsMultitenantS3SampleAuthorizer",
@@ -49,7 +55,7 @@ def get_temporary_credentials(id_token: str):
     return credentials
 
 
-@app.route("/files/{key+}", methods=["GET"], authorizer=authorizer)
+@app.route("/files/{key+}", methods=["GET"], authorizer=authorizer, cors=cors_config)
 def index():
     key = (
         app.current_request.uri_params.get("key")
@@ -88,7 +94,7 @@ def index():
         raise NotFoundError()
 
 
-@app.route("/login", methods=["POST"])
+@app.route("/login", methods=["POST"], cors=cors_config)
 def login():
     request = app.current_request
     if request is None:
