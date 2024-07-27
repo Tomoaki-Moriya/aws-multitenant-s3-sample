@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>multitenant-s3-sample</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="login-form">
+        <h2>API URL</h2>
+        <input type="text" id="apiUrl" placeholder="API URL" />
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username" />
+        <input type="password" id="password" placeholder="Password" />
+        <button id="loginButton">Login</button>
+      </div>
+      <div class="image-container">
+        <div>
+          <p id="tenant1Url">tenant-1/Tenant1_Black.jpg</p>
+          <img id="tenant1Img" src="" alt="NotFound" />
+        </div>
+        <div>
+          <p id="tenant2Url">tenant-2/Tenant2_Black.jpg</p>
+          <img id="tenant2Img" src="" alt="NotFound" />
+        </div>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
