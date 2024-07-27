@@ -10,13 +10,12 @@ export class SampleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const { userPool, identityPool } = this.createCognitoAuthentification();
+    const identityPool = this.createCognitoAuthentification();
     const bucket = this.createBucket();
-    this.attachRole(userPool, bucket, identityPool);
+    this.attachRole(bucket, identityPool);
   }
 
   private attachRole(
-    userPool: cdk.aws_cognito.UserPool,
     bucket: cdk.aws_s3.Bucket,
     identityPool: cdk.aws_cognito.CfnIdentityPool
   ) {
@@ -25,7 +24,7 @@ export class SampleStack extends cdk.Stack {
         "cognito-identity.amazonaws.com",
         {
           StringEquals: {
-            "cognito-identity.amazonaws.com:aud": userPool.userPoolId,
+            "cognito-identity.amazonaws.com:aud": identityPool.ref,
           },
           "ForAnyValue:StringLike": {
             "cognito-identity.amazonaws.com:amr": "authenticated",
@@ -54,10 +53,7 @@ export class SampleStack extends cdk.Stack {
     );
   }
 
-  private createCognitoAuthentification(): {
-    userPool: cognito.UserPool;
-    identityPool: cognito.CfnIdentityPool;
-  } {
+  private createCognitoAuthentification(): cognito.CfnIdentityPool {
     const userPool = new cognito.UserPool(this, `${PREFIX}-userpool-id`, {
       userPoolName: `${PREFIX}-userpool`,
       signInAliases: { email: true },
@@ -110,7 +106,7 @@ export class SampleStack extends cdk.Stack {
         },
       }
     );
-    return { userPool, identityPool };
+    return identityPool;
   }
 
   private createBucket(): s3.Bucket {
